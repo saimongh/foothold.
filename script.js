@@ -450,8 +450,20 @@ function deleteItem(id) {
 }
 
 function clearDateTime() {
-    document.getElementById('itemDate').value = '';
-    document.getElementById('itemTime').value = '';
+    const dateInput = document.getElementById('itemDate');
+    const timeInput = document.getElementById('itemTime');
+    
+    // Clear the values
+    dateInput.value = '';
+    timeInput.value = '';
+    
+    // Force reset the validation state
+    dateInput.setCustomValidity('');
+    timeInput.setCustomValidity('');
+    
+    // Double-check: Remove 'required' attribute if it somehow got added
+    dateInput.removeAttribute('required');
+    timeInput.removeAttribute('required');
 }
 
 function closeModal() { document.getElementById('itemModal').classList.remove('active'); setTimeout(() => { document.getElementById('itemForm').reset(); editingId = null; tempSubtasks = []; }, 200); }
