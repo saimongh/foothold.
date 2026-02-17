@@ -549,22 +549,26 @@ h1 {
 }
 .date-badge.overdue { color: var(--danger-color); font-weight: bold; }
 
-/* STATUS TAGS */
-.status-tag {
-    font-size: 10px;
+/* --- Status Tags (Text Only) --- */
+.status-text {
+    font-size: 11px;
     font-weight: 700;
     text-transform: uppercase;
-    padding: 3px 8px;
-    border-radius: 4px;
-    display: inline-block;
-    color: #fff;
-    margin-bottom: 5px;
-    margin-right: 5px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    margin-left: 10px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    letter-spacing: 0.5px;
 }
-.status-tag.past-due { background-color: #800000; } /* Maroon */
-.status-tag.urgent { background-color: #ff0000; }   /* Red */
-.status-tag.upcoming { background-color: #f59e0b; color: #fff; } /* Yellow/Orange */
+
+.status-text.past-due { color: #800000; } /* Maroon */
+.status-text.urgent { color: var(--danger-color); }   /* Red */
+.status-text.upcoming { color: #f59e0b; } /* Yellow/Orange */
+
+/* Ensure date remains muted always */
+.date-badge {
+    color: var(--text-muted) !important;
+}
 
 .progress-container {
     width: 100%;

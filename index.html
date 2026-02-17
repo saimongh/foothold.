@@ -154,15 +154,19 @@
 
                     <div id="tab-smart-tags" class="settings-tab">
                         <h3>Smart Status Tags</h3>
-                        <p style="margin-bottom: 20px; color: var(--text-muted); font-size: 14px;">Define when tasks should be flagged automatically.</p>
+                        <p style="margin-bottom: 20px; color: var(--text-muted); font-size: 14px;">
+                            Configure when status alerts appear next to the due date.
+                        </p>
+                        
                         <div class="form-group">
-                            <label>Urgent (Red)</label>
-                            <p style="font-size:12px; color:var(--text-muted); margin-bottom:5px;">Highlight if due within this many hours:</p>
+                            <label style="color: var(--danger-color);"><i class="fas fa-triangle-exclamation"></i> Urgent (Red)</label>
+                            <p style="font-size:12px; color:var(--text-muted); margin-bottom:5px;">Show alert if due within this many hours:</p>
                             <input type="number" id="settingUrgentHours" value="24" min="1" onchange="saveTagSettings()">
                         </div>
+
                         <div class="form-group">
-                            <label>Upcoming (Yellow)</label>
-                            <p style="font-size:12px; color:var(--text-muted); margin-bottom:5px;">Highlight if due within this many days:</p>
+                            <label style="color: #f59e0b;"><i class="fas fa-hourglass-half"></i> Upcoming (Yellow)</label>
+                            <p style="font-size:12px; color:var(--text-muted); margin-bottom:5px;">Show alert if due within this many days:</p>
                             <input type="number" id="settingUpcomingDays" value="3" min="1" onchange="saveTagSettings()">
                         </div>
                     </div>

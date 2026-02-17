@@ -133,9 +133,13 @@ function getStatusBadge(item) {
     const diffHours = diffMs / (1000 * 60 * 60);
     const diffDays = diffHours / 24;
 
-    if (diffMs < 0) return `<span class="status-tag past-due">Past Due</span>`;
-    else if (diffHours <= tagSettings.urgentHours) return `<span class="status-tag urgent">Urgent</span>`;
-    else if (diffDays <= tagSettings.upcomingDays) return `<span class="status-tag upcoming">Upcoming</span>`;
+    if (diffMs < 0) {
+        return `<span class="status-text past-due"><i class="fas fa-circle-exclamation"></i> Past Due</span>`;
+    } else if (diffHours <= tagSettings.urgentHours) {
+        return `<span class="status-text urgent"><i class="fas fa-triangle-exclamation"></i> Urgent</span>`;
+    } else if (diffDays <= tagSettings.upcomingDays) {
+        return `<span class="status-text upcoming"><i class="fas fa-hourglass-half"></i> Upcoming</span>`;
+    }
     return '';
 }
 
@@ -186,21 +190,27 @@ function renderItems() {
         const isDragEnabled = sortBy === 'manual' && !searchQuery;
 
         return `
-        <div class="item-card ${item.completed ? 'completed-card' : ''}" ${isDragEnabled ? 'draggable="true"' : ''} data-id="${item.id}">
-            <div class="item-header">
-                <div class="item-title">${item.title}</div>
-                <div class="item-actions">
-                    <button onclick="toggleItemStatus(${item.id})" class="btn-check" title="Complete"><i class="fas ${item.completed ? 'fa-undo' : 'fa-check'}"></i></button>
-                    <button onclick="editItem(${item.id})" title="Edit"><i class="fas fa-pen"></i></button>
-                    <button onclick="deleteItem(${item.id})" class="btn-delete" title="Delete"><i class="fas fa-trash"></i></button>
-                </div>
-            </div>
-            <div style="margin-bottom:5px;">${statusHtml}</div>
-            <div class="item-meta"><span class="item-type">${categoryName}</span>${dateHtml}</div>
-            ${progressHtml}
-            ${item.description ? `<div class="item-description">${parseMarkdown(item.description)}</div>` : ''}
-            ${item.subtasks.length > 0 ? `<div class="subtasks">${item.subtasks.map(st => `<div class="subtask" data-sub-id="${st.id}" onclick="toggleSubtask(${item.id}, ${st.id})"><input type="checkbox" ${st.completed ? 'checked' : ''} style="pointer-events: none;"><span>${st.text}</span></div>`).join('')}</div>` : ''}
-        </div>`;
+                <div class="item-card ${item.completed ? 'completed-card' : ''}" ${isDragEnabled ? 'draggable="true"' : ''} data-id="${item.id}">
+                    <div class="item-header">
+                        <div class="item-title">${item.title}</div>
+                        <div class="item-actions">
+                            <button onclick="toggleItemStatus(${item.id})" class="btn-check" title="Complete"><i class="fas ${item.completed ? 'fa-undo' : 'fa-check'}"></i></button>
+                            <button onclick="editItem(${item.id})" title="Edit"><i class="fas fa-pen"></i></button>
+                            <button onclick="deleteItem(${item.id})" class="btn-delete" title="Delete"><i class="fas fa-trash"></i></button>
+                        </div>
+                    </div>
+                    
+                    <div class="item-meta">
+                        <div>
+                            <span class="item-type">${categoryName}</span>
+                            ${dateHtml}
+                            ${statusHtml} </div>
+                    </div>
+
+                    ${progressHtml}
+                    ${item.description ? `<div class="item-description">${parseMarkdown(item.description)}</div>` : ''}
+                    ${item.subtasks.length > 0 ? `<div class="subtasks">${item.subtasks.map(st => `<div class="subtask" data-sub-id="${st.id}" onclick="toggleSubtask(${item.id}, ${st.id})"><input type="checkbox" ${st.completed ? 'checked' : ''} style="pointer-events: none;"><span>${st.text}</span></div>`).join('')}</div>` : ''}
+                </div>`;
     }).join('');
 
     if (sortBy === 'manual' && !searchQuery) {
