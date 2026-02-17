@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>foothold.</title>
+    
+    <link rel="stylesheet" href="style.css">
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&family=Playfair+Display:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+    
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90' font-family='sans-serif' font-weight='bold' fill='%234caf50'>✓</text></svg>">
+    <link rel="apple-touch-icon" href="data:image/png;base64,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">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>foothold.</h1>
+            <div class="header-actions">
+                <button class="icon-btn-header" onclick="triggerImport()" title="Import Data"><i class="fas fa-file-import"></i></button>
+                <button class="icon-btn-header" onclick="exportData()" title="Export Data"><i class="fas fa-download"></i></button>
+                <button class="icon-btn-header" onclick="toggleTheme()" id="themeBtn" title="Toggle Light/Dark"><i class="fas fa-moon"></i></button>
+                <button class="icon-btn-header" onclick="openSettings()" title="Settings"><i class="fas fa-cog"></i></button>
+            </div>
+            <input type="file" id="importFile" style="display: none;" accept=".json" onchange="importData(this)">
+        </header>
+
+        <div class="main-content">
+            <aside class="sidebar">
+                <div class="sidebar-header">
+                    <div class="filter-wrapper">
+                        <div class="active-tags-container" id="activeTagsContainer"></div>
+                        <input type="text" id="catFilterInput" class="cat-filter-input" placeholder="Enter tags to search" autocomplete="off">
+                        <div class="suggestions-dropdown" id="suggestionsDropdown"></div>
+                    </div>
+
+                    <div class="search-container">
+                        <i class="fas fa-search search-icon"></i>
+                        <input type="text" class="search-input" placeholder="Search items..." onkeyup="handleSearch(this.value)">
+                    </div>
+                    <div class="sort-controls">
+                        <span>Sort By:</span>
+                        <button class="sort-btn" onclick="toggleSort()">
+                            <span id="sortLabel">Manual</span> <i class="fas fa-sort" id="sortIcon"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="category-row">
+                    <span class="category-name" id="allFilter" onclick="resetFilters()">All Active</span>
+                </div>
+
+                <div id="dynamicCategories"></div>
+                <button class="btn-new-category" onclick="addNewCategory()">+ New Category</button>
+                <div class="sidebar-divider"></div>
+                <div class="category-row">
+                    <span class="category-name" id="completedFilter" onclick="toggleCompletedFilter()">Completed</span>
+                    <span style="font-size: 12px; color: var(--text-muted);"><i class="fas fa-check"></i></span>
+                </div>
+            </aside>
+
+            <div class="items-grid" id="itemsGrid"></div>
+        </div>
+    </div>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <div class="modal" id="itemModal">
+        <div class="modal-content">
+            <h2 id="modalTitle">New Item</h2>
+            <form id="itemForm">
+                <div class="form-group"><label>Title</label><input type="text" id="itemTitle" required placeholder="What needs to be done?"></div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                    <div class="form-group">
+                        <label>Category</label>
+                        <select id="itemType"></select>
+                    </div>
+                    <div class="form-group">
+                        <div class="date-header">
+                            <label style="margin:0;">Due Date & Time</label>
+                            <button type="button" class="btn-clear-date" onclick="clearDateTime()">Clear Date</button>
+                        </div>
+                        <div class="date-time-group">
+                            <input type="date" id="itemDate">
+                            <input type="time" id="itemTime">
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group"><label>Description</label><textarea id="itemDescription" placeholder="Add details..."></textarea></div>
+                <div class="form-group">
+                    <label>Sub-tasks</label>
+                    <div style="display: flex; gap: 10px; align-items: flex-end;">
+                        <input type="text" id="subtaskInput" placeholder="Add a step">
+                        <button type="button" class="btn-text" onclick="addSubtask()">ADD</button>
+                    </div>
+                    <div id="subtaskList" style="margin-top: 15px;"></div>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn-text" onclick="closeModal()">Cancel</button>
+                    <button type="submit" class="btn-text primary" title="Ctrl+Enter to save">Save Item</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal" id="settingsModal">
+        <div class="modal-content" style="max-width: 700px;">
+            <h2>Settings</h2>
+            <div class="settings-container">
+                <nav class="settings-nav">
+                    <button class="active" onclick="switchSettingsTab('tab-help')">How to Use</button>
+                    <button onclick="switchSettingsTab('tab-themes')">Themes</button>
+                    <button onclick="switchSettingsTab('tab-smart-tags')">Smart Tags</button>
+                    <button onclick="switchSettingsTab('tab-notifications')">Notifications</button>
+                </nav>
+                <div class="settings-content">
+                    
+                    <div id="tab-help" class="settings-tab active">
+                        <ul class="help-list" style="list-style: none; padding: 0;">
+                            <li><strong>Create:</strong> Press <code>N</code> or click the <code>+</code> button next to a category to create a task.</li>
+                            <li><strong>Filters:</strong> Use the tag bar to filter by multiple categories. Type a name or select from the dropdown.</li>
+                            <li><strong>Mobile Drag:</strong> Touch the grip icon for categories. Tap & Hold (0.5s) for cards.</li>
+                            <li><strong>Data:</strong> Your data is stored locally. Use Import/Export to backup.</li>
+                        </ul>
+                    </div>
+
+                    <div id="tab-themes" class="settings-tab">
+                        <p style="margin-bottom: 20px; font-size: 14px; color: var(--text-muted);">Select a color scheme for your workspace.</p>
+                        <div class="theme-grid">
+                            <button class="theme-btn t-light" onclick="setTheme('light')">Standard Light</button>
+                            <button class="theme-btn t-dark" onclick="setTheme('dark')">Standard Dark</button>
+                            <button class="theme-btn t-mint" onclick="setTheme('light-green')">Mint Fresh</button>
+                            <button class="theme-btn t-neon" onclick="setTheme('dark-green')">Neon Sage</button>
+                            <button class="theme-btn t-lpurple" onclick="setTheme('light-purple')">Lavender Dream</button>
+                            <button class="theme-btn t-dpurple" onclick="setTheme('dark-purple')">Midnight Violet</button>
+                            <button class="theme-btn t-lblue" onclick="setTheme('light-blue')">Sky Breeze</button>
+                            <button class="theme-btn t-dblue" onclick="setTheme('dark-blue')">Abyssal Blue</button>
+                            <button class="theme-btn t-pink" onclick="setTheme('pink')">Blush Petal</button>
+                            <button class="theme-btn t-red" onclick="setTheme('dark-red')">Crimson Core</button>
+                            <button class="theme-btn t-cafe" onclick="setTheme('light-cafe')">Cafe Latte</button>
+                            <button class="theme-btn t-brown" onclick="setTheme('dark-cafe')">Cafe Espresso</button>
+                            <button class="theme-btn t-ranny" onclick="setTheme('ranny')">Ranny</button>
+                        </div>
+                    </div>
+
+                    <div id="tab-smart-tags" class="settings-tab">
+                        <h3>Smart Status Tags</h3>
+                        <p style="margin-bottom: 20px; color: var(--text-muted); font-size: 14px;">Define when tasks should be flagged automatically.</p>
+                        <div class="form-group">
+                            <label>Urgent (Red)</label>
+                            <p style="font-size:12px; color:var(--text-muted); margin-bottom:5px;">Highlight if due within this many hours:</p>
+                            <input type="number" id="settingUrgentHours" value="24" min="1" onchange="saveTagSettings()">
+                        </div>
+                        <div class="form-group">
+                            <label>Upcoming (Yellow)</label>
+                            <p style="font-size:12px; color:var(--text-muted); margin-bottom:5px;">Highlight if due within this many days:</p>
+                            <input type="number" id="settingUpcomingDays" value="3" min="1" onchange="saveTagSettings()">
+                        </div>
+                    </div>
+
+                    <div id="tab-notifications" class="settings-tab">
+                        <h3>Notifications</h3>
+                        <p style="margin-bottom: 20px; color: var(--text-muted); font-size: 14px;">
+                            Enable browser notifications to get alerted when active tasks are due. 
+                            <br><em>Note: The app must remain open in a tab to function.</em>
+                        </p>
+                        <button class="btn-text primary" onclick="requestNotificationPermission()">Enable Notifications</button>
+                    </div>
+
+                </div>
+            </div>
+            <div class="form-actions">
+                <button type="button" class="btn-text" onclick="closeSettings()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
