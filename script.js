@@ -572,6 +572,13 @@ function importData(input) {
     reader.readAsText(file);
 }
 
+document.getElementById('subtaskInput').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+        e.preventDefault(); // Stop the form from submitting (closing modal)
+        addSubtask();       // Trigger the "Add" button logic
+    }
+});
+
 const savedTheme = localStorage.getItem('theme');
 if (savedTheme) setTheme(savedTheme);
 
