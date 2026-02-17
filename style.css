@@ -591,7 +591,7 @@ h1 {
 .btn-delete:hover { color: var(--danger-color) !important; }
 
 .item-meta { margin-bottom: 10px; display: flex; flex-direction: column; gap: 5px; }
-.item-type { font-size: 10px; text-transform: uppercase; letter-spacing: 2px; padding: 4px 8px; background: var(--tag-bg); color: var(--tag-text); border-radius: 2px; align-self: flex-start; }
+.item-type { font-size: 10px; text-transform: uppercase; letter-spacing: 2px; padding: 4px 8px; background: var(--tag-bg); color: var(--tag-text); border-radius: 2px; align-self: flex-start; margin-right: 15px;}
 
 .item-description { font-size: 14px; color: var(--text-muted); line-height: 1.6; margin-bottom: 15px; font-weight: 300; }
 .item-description strong { font-weight: 700; color: var(--text-main); }
