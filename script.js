@@ -538,7 +538,15 @@ function toggleTheme() {
         'light-blue': 'dark-blue', 'dark-blue': 'light-blue',
         'pink': 'dark-red', 'dark-red': 'pink',
         'light-cafe': 'dark-cafe', 'dark-cafe': 'light-cafe', 
-        'ranny': 'ranny'
+        'ranny': 'ranny-red',
+        'ranny-red': 'ranny-orange',
+        'ranny-orange': 'ranny-yellow',
+        'ranny-yellow': 'ranny-mint',
+        'ranny-mint': 'ranny-green',
+        'ranny-green': 'ranny-cyan',
+        'ranny-cyan': 'ranny-blue',
+        'ranny-blue': 'ranny-purple',
+        'ranny-purple': 'ranny'
     };
     if (themePairs[current]) nextTheme = themePairs[current];
     else nextTheme = current.includes('dark') ? 'light' : 'dark';
