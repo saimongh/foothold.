@@ -689,6 +689,27 @@ body.hide-counts .cat-count {
     display: none;
 }
 
+/* --- COMPLETED FILTER STYLING --- */
+
+/* Default State: Text matches the rest, Icon is muted */
+#completedFilter {
+    color: var(--text-main);
+    font-weight: 400;
+    transition: color 0.2s ease;
+}
+
+/* Active State: Text becomes Accent */
+#completedFilter.active {
+    color: var(--accent-color);
+    font-weight: 700;
+}
+
+/* Active State: Make the Checkmark Icon match the Accent too */
+.category-row.active-state .fa-check {
+    color: var(--accent-color) !important;
+    transition: color 0.2s ease;
+}
+
 @media (max-width: 768px) {
     .main-content { grid-template-columns: 1fr; }
     .sidebar { position: static; margin-bottom: 40px; }

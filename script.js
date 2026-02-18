@@ -149,8 +149,24 @@ function toggleCompletedFilter() {
 
 function updateSidebarStyles() {
     const isAllActive = selectedTags.size === 0 && !showCompleted;
-    document.getElementById('allFilter').classList.toggle('active', isAllActive);
-    document.getElementById('completedFilter').classList.toggle('active', showCompleted);
+    
+    // 1. Update "All Active"
+    const allFilterBtn = document.getElementById('allFilter');
+    if (allFilterBtn) allFilterBtn.classList.toggle('active', isAllActive);
+    
+    // 2. Update "Completed" (Text + Parent Row for icon styling)
+    const completedBtn = document.getElementById('completedFilter');
+    const completedRow = completedBtn ? completedBtn.closest('.category-row') : null;
+    
+    if (completedBtn) {
+        completedBtn.classList.toggle('active', showCompleted);
+        // Toggle class on the parent row to style the checkmark icon
+        if (completedRow) {
+            completedRow.classList.toggle('active-state', showCompleted);
+        }
+    }
+
+    // 3. Update Category Tags
     document.querySelectorAll('.category-name').forEach(el => {
         const catId = el.closest('.category-row')?.dataset.catId;
         if(catId) el.classList.toggle('active', selectedTags.has(catId));
