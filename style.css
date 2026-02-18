@@ -532,14 +532,15 @@ h1 {
 /* ITEMS GRID */
 .items-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 25px;
+    /* Use ~240px to fit 3 columns on standard desktops */
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 20px;
 }
 
 .item-card {
     background: var(--bg-card);
     border: 1px solid var(--border-color);
-    padding: 25px;
+    padding: 20px; /* Compact padding */
     transition: box-shadow 0.3s ease, border-color 0.3s ease, transform 0.2s ease; 
     position: relative;
     display: flex;
@@ -569,7 +570,7 @@ h1 {
 }
 
 .item-header { display: flex; justify-content: space-between; align-items: start; margin-bottom: 10px; }
-.item-title { font-family: 'Playfair Display', serif; font-size: 1.3rem; color: var(--text-main); margin-right: 10px; line-height: 1.2; }
+.item-title { font-family: 'Playfair Display', serif; font-size: 1.2rem; color: var(--text-main); margin-right: 10px; line-height: 1.2; }
 .completed-card .item-title { text-decoration: line-through; }
 
 .date-badge {
