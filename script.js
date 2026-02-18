@@ -3,7 +3,9 @@ let items = JSON.parse(localStorage.getItem('taskManagerItems')) || [];
 let categories = JSON.parse(localStorage.getItem('taskManagerCategories')) || [
     { id: 'goal', name: 'Goals' }, { id: 'project', name: 'Projects' }, { id: 'task', name: 'Tasks' }
 ];
+// Settings
 let tagSettings = JSON.parse(localStorage.getItem('footholdTagSettings')) || { urgentHours: 24, upcomingDays: 3 };
+let showCounts = JSON.parse(localStorage.getItem('footholdShowCounts')) ?? true;
 
 let activeFilters = new Set(['all']);
 let selectedTags = new Set();
@@ -14,10 +16,18 @@ let sortBy = 'manual';
 let editingId = null;
 let tempSubtasks = [];
 
-// Init Settings Inputs
-if(document.getElementById('settingUrgentHours')) {
-    document.getElementById('settingUrgentHours').value = tagSettings.urgentHours;
-    document.getElementById('settingUpcomingDays').value = tagSettings.upcomingDays;
+// Apply settings immediately
+if (!showCounts) document.body.classList.add('hide-counts');
+
+// Init Settings Inputs (if modal is open/ready)
+function initSettingsInputs() {
+    if(document.getElementById('settingUrgentHours')) {
+        document.getElementById('settingUrgentHours').value = tagSettings.urgentHours;
+        document.getElementById('settingUpcomingDays').value = tagSettings.upcomingDays;
+    }
+    if(document.getElementById('settingShowCounts')) {
+        document.getElementById('settingShowCounts').checked = showCounts;
+    }
 }
 
 function saveData() {
@@ -30,6 +40,12 @@ function saveTagSettings() {
     tagSettings.upcomingDays = parseInt(document.getElementById('settingUpcomingDays').value) || 3;
     localStorage.setItem('footholdTagSettings', JSON.stringify(tagSettings));
     renderItems();
+}
+
+function toggleCountSetting() {
+    showCounts = document.getElementById('settingShowCounts').checked;
+    localStorage.setItem('footholdShowCounts', JSON.stringify(showCounts));
+    document.body.classList.toggle('hide-counts', !showCounts);
 }
 
 // --- GLOBAL SHORTCUTS ---
@@ -56,6 +72,18 @@ document.addEventListener('keydown', (e) => {
         }
     }
 });
+
+// --- SUBTASK "ENTER" FIX ---
+// Allows pressing Enter in the subtask input to add it instead of closing the modal
+const subInput = document.getElementById('subtaskInput');
+if(subInput) {
+    subInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            addSubtask();
+        }
+    });
+}
 
 // --- TAG FILTER LOGIC ---
 const tagInput = document.getElementById('catFilterInput');
@@ -86,8 +114,14 @@ function renderSuggestions(filterText = '') {
 }
 
 function toggleCategoryFilter(id) {
+    // Exclusive switching logic for Sidebar
     const isOnlySelected = selectedTags.size === 1 && selectedTags.has(id);
-    if (isOnlySelected) {removeTag(id);} else {selectedTags.clear(); addTag(id);}
+    if (isOnlySelected) {
+        removeTag(id);
+    } else {
+        selectedTags.clear();
+        addTag(id);
+    }
 }
 
 function addTag(id) {
@@ -133,13 +167,9 @@ function getStatusBadge(item) {
     const diffHours = diffMs / (1000 * 60 * 60);
     const diffDays = diffHours / 24;
 
-    if (diffMs < 0) {
-        return `<span class="status-text past-due"><i class="fas fa-circle-exclamation"></i> Past Due</span>`;
-    } else if (diffHours <= tagSettings.urgentHours) {
-        return `<span class="status-text urgent"><i class="fas fa-triangle-exclamation"></i> Urgent</span>`;
-    } else if (diffDays <= tagSettings.upcomingDays) {
-        return `<span class="status-text upcoming"><i class="fas fa-hourglass-half"></i> Upcoming</span>`;
-    }
+    if (diffMs < 0) return `<span class="status-text past-due"><i class="fas fa-circle-exclamation"></i> Past Due</span>`;
+    else if (diffHours <= tagSettings.urgentHours) return `<span class="status-text urgent"><i class="fas fa-triangle-exclamation"></i> Urgent</span>`;
+    else if (diffDays <= tagSettings.upcomingDays) return `<span class="status-text upcoming"><i class="fas fa-hourglass-half"></i> Upcoming</span>`;
     return '';
 }
 
@@ -180,37 +210,39 @@ function renderItems() {
             const dateObj = new Date(item.dueDate + (item.dueTime ? 'T' + item.dueTime : ''));
             const today = new Date(); today.setHours(0,0,0,0);
             const itemDateOnly = new Date(item.dueDate);
-            const isOverdue = itemDateOnly < today && !item.completed; // Logic kept for text color, tag handles visual
+            const isOverdue = itemDateOnly < today && !item.completed;
             
             const dateStr = dateObj.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
             const timeStr = item.dueTime ? new Date('1970-01-01T' + item.dueTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '';
-            dateHtml = `<span class="date-badge ${isOverdue ? 'overdue' : ''}"><i class="far fa-calendar"></i> ${dateStr} ${timeStr}</span>`;
+            // Date text is now always muted/grey
+            dateHtml = `<span class="date-badge"><i class="far fa-calendar"></i> ${dateStr} ${timeStr}</span>`;
         }
 
         const isDragEnabled = sortBy === 'manual' && !searchQuery;
 
         return `
-                <div class="item-card ${item.completed ? 'completed-card' : ''}" ${isDragEnabled ? 'draggable="true"' : ''} data-id="${item.id}">
-                    <div class="item-header">
-                        <div class="item-title">${item.title}</div>
-                        <div class="item-actions">
-                            <button onclick="toggleItemStatus(${item.id})" class="btn-check" title="Complete"><i class="fas ${item.completed ? 'fa-undo' : 'fa-check'}"></i></button>
-                            <button onclick="editItem(${item.id})" title="Edit"><i class="fas fa-pen"></i></button>
-                            <button onclick="deleteItem(${item.id})" class="btn-delete" title="Delete"><i class="fas fa-trash"></i></button>
-                        </div>
-                    </div>
-                    
-                    <div class="item-meta">
-                        <div>
-                            <span class="item-type">${categoryName}</span>
-                            ${dateHtml}
-                            ${statusHtml} </div>
-                    </div>
+        <div class="item-card ${item.completed ? 'completed-card' : ''}" ${isDragEnabled ? 'draggable="true"' : ''} data-id="${item.id}">
+            <div class="item-header">
+                <div class="item-title">${item.title}</div>
+                <div class="item-actions">
+                    <button onclick="toggleItemStatus(${item.id})" class="btn-check" title="Complete"><i class="fas ${item.completed ? 'fa-undo' : 'fa-check'}"></i></button>
+                    <button onclick="editItem(${item.id})" title="Edit"><i class="fas fa-pen"></i></button>
+                    <button onclick="deleteItem(${item.id})" class="btn-delete" title="Delete"><i class="fas fa-trash"></i></button>
+                </div>
+            </div>
+            
+            <div class="item-meta">
+                <div>
+                    <span class="item-type">${categoryName}</span>
+                    ${dateHtml}
+                    ${statusHtml}
+                </div>
+            </div>
 
-                    ${progressHtml}
-                    ${item.description ? `<div class="item-description">${parseMarkdown(item.description)}</div>` : ''}
-                    ${item.subtasks.length > 0 ? `<div class="subtasks">${item.subtasks.map(st => `<div class="subtask" data-sub-id="${st.id}" onclick="toggleSubtask(${item.id}, ${st.id})"><input type="checkbox" ${st.completed ? 'checked' : ''} style="pointer-events: none;"><span>${st.text}</span></div>`).join('')}</div>` : ''}
-                </div>`;
+            ${progressHtml}
+            ${item.description ? `<div class="item-description">${parseMarkdown(item.description)}</div>` : ''}
+            ${item.subtasks.length > 0 ? `<div class="subtasks">${item.subtasks.map(st => `<div class="subtask" data-sub-id="${st.id}" onclick="toggleSubtask(${item.id}, ${st.id})"><input type="checkbox" ${st.completed ? 'checked' : ''} style="pointer-events: none;"><span>${st.text}</span></div>`).join('')}</div>` : ''}
+        </div>`;
     }).join('');
 
     if (sortBy === 'manual' && !searchQuery) {
@@ -228,17 +260,24 @@ function handleSearch(val) { searchQuery = val.toLowerCase().trim(); renderItems
 // --- SIDEBAR ---
 function renderSidebar() {
     const container = document.getElementById('dynamicCategories');
-    container.innerHTML = categories.map(cat => `
+    container.innerHTML = categories.map(cat => {
+        // Calculate active counts
+        const activeCount = items.filter(i => i.type === cat.id && !i.completed).length;
+        
+        return `
         <div class="category-row" draggable="true" data-cat-id="${cat.id}">
             <i class="fas fa-grip-vertical cat-handle"></i>
-            <span class="category-name ${selectedTags.has(cat.id) ? 'active' : ''}" onclick="toggleCategoryFilter('${cat.id}')">${cat.name}</span>
+            <span class="category-name ${selectedTags.has(cat.id) ? 'active' : ''}" onclick="toggleCategoryFilter('${cat.id}')">
+                ${cat.name}
+                <span class="cat-count">${activeCount}</span>
+            </span>
             <div class="cat-actions">
                 <button class="cat-btn-mini" onclick="renameCategory('${cat.id}')"><i class="fas fa-pen"></i></button>
                 <button class="cat-btn-mini delete" onclick="deleteCategory('${cat.id}')"><i class="fas fa-trash"></i></button>
                 <button class="cat-btn-mini add" onclick="openNewItem('${cat.id}')"><i class="fas fa-plus"></i></button>
             </div>
         </div>
-    `).join('');
+    `}).join('');
     
     updateSidebarStyles();
 
@@ -446,22 +485,18 @@ function deleteItem(id) {
     items.splice(idx, 1);
     saveData();
     renderItems();
-    showToast("Item deleted.", () => { items.splice(idx, 0, deletedItem); saveData(); renderItems(); });
+    renderSidebar(); // Update counts
+    showToast("Item deleted.", () => { items.splice(idx, 0, deletedItem); saveData(); renderItems(); renderSidebar(); });
 }
 
 function clearDateTime() {
     const dateInput = document.getElementById('itemDate');
     const timeInput = document.getElementById('itemTime');
-    
-    // Clear the values
     dateInput.value = '';
     timeInput.value = '';
-    
-    // Force reset the validation state
+    // Fix: Force reset validation state to prevent stuck "invalid" UI
     dateInput.setCustomValidity('');
     timeInput.setCustomValidity('');
-    
-    // Double-check: Remove 'required' attribute if it somehow got added
     dateInput.removeAttribute('required');
     timeInput.removeAttribute('required');
 }
@@ -483,7 +518,7 @@ document.getElementById('itemForm').onsubmit = (e) => {
         createdAt: Date.now()
     };
     if (editingId) items[items.findIndex(i => i.id === editingId)] = item; else items.push(item);
-    saveData(); closeModal(); renderItems();
+    saveData(); closeModal(); renderItems(); renderSidebar(); // Update counts
 };
 
 function addSubtask() { const val = document.getElementById('subtaskInput').value.trim(); if(val) { tempSubtasks.push({ text: val, completed: false, id: Date.now() }); document.getElementById('subtaskInput').value=''; renderTempSubtasks(); } }
@@ -502,7 +537,7 @@ function renderTempSubtasks() {
     });
 }
 
-function toggleItemStatus(id) { const item = items.find(i => i.id === id); item.completed = !item.completed; saveData(); renderItems(); if(item.completed) showToast("Item completed."); }
+function toggleItemStatus(id) { const item = items.find(i => i.id === id); item.completed = !item.completed; saveData(); renderItems(); renderSidebar(); if(item.completed) showToast("Item completed."); }
 function toggleSubtask(itemId, subtaskId) { 
     const item = items.find(i => i.id === itemId); 
     if(item) { 
@@ -535,7 +570,10 @@ function populateCategorySelect() { document.getElementById('itemType').innerHTM
 function getCategoryName(id) { const cat = categories.find(c => c.id === id); return cat ? cat.name : 'Unknown'; }
 
 // --- SETTINGS & THEMES ---
-function openSettings() { document.getElementById('settingsModal').classList.add('active'); }
+function openSettings() { 
+    document.getElementById('settingsModal').classList.add('active'); 
+    initSettingsInputs(); // Make sure inputs reflect current state
+}
 function closeSettings() { document.getElementById('settingsModal').classList.remove('active'); }
 function switchSettingsTab(tabId) {
     document.querySelectorAll('.settings-tab').forEach(t => t.classList.remove('active'));
@@ -547,7 +585,15 @@ function setTheme(theme) {
     document.body.setAttribute('data-theme', theme);
     localStorage.setItem('theme', theme);
     const icon = document.getElementById('themeBtn').querySelector('i');
-    if(['dark', 'dark-green', 'dark-purple', 'dark-blue', 'dark-red', 'dark-cafe', 'ranny'].includes(theme)) icon.classList.replace('fa-moon', 'fa-sun');
+    
+    // Updated Dark Theme list for Ranny Variants
+    const darkThemes = [
+        'dark', 'dark-green', 'dark-purple', 'dark-blue', 'dark-red', 'dark-cafe', 'ranny',
+        'ranny-red', 'ranny-orange', 'ranny-yellow', 'ranny-mint', 
+        'ranny-green', 'ranny-cyan', 'ranny-blue', 'ranny-purple'
+    ];
+
+    if(darkThemes.includes(theme)) icon.classList.replace('fa-moon', 'fa-sun');
     else icon.classList.replace('fa-sun', 'fa-moon');
 }
 function toggleTheme() {
@@ -560,15 +606,7 @@ function toggleTheme() {
         'light-blue': 'dark-blue', 'dark-blue': 'light-blue',
         'pink': 'dark-red', 'dark-red': 'pink',
         'light-cafe': 'dark-cafe', 'dark-cafe': 'light-cafe', 
-        'ranny': 'ranny-red',
-        'ranny-red': 'ranny-orange',
-        'ranny-orange': 'ranny-yellow',
-        'ranny-yellow': 'ranny-mint',
-        'ranny-mint': 'ranny-green',
-        'ranny-green': 'ranny-cyan',
-        'ranny-cyan': 'ranny-blue',
-        'ranny-blue': 'ranny-purple',
-        'ranny-purple': 'ranny'
+        'ranny': 'ranny'
     };
     if (themePairs[current]) nextTheme = themePairs[current];
     else nextTheme = current.includes('dark') ? 'light' : 'dark';
@@ -593,13 +631,6 @@ function importData(input) {
     };
     reader.readAsText(file);
 }
-
-document.getElementById('subtaskInput').addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
-        e.preventDefault(); // Stop the form from submitting (closing modal)
-        addSubtask();       // Trigger the "Add" button logic
-    }
-});
 
 const savedTheme = localStorage.getItem('theme');
 if (savedTheme) setTheme(savedTheme);

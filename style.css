@@ -672,6 +672,23 @@ input:focus, textarea:focus, select:focus { outline: none; border-bottom-color: 
 .t-cafe { background: #EBE7DE; color: #4A3C31; border-color: #9C7C58; }
 .t-ranny { background: #0a0a0a; color: #ff70b8; border-color: #ff70b8; }
 
+/* --- SIDEBAR COUNTERS --- */
+.cat-count {
+    font-size: 11px;
+    color: var(--text-muted);
+    background: var(--tag-bg);
+    padding: 2px 8px;
+    border-radius: 12px;
+    margin-left: 8px;
+    font-weight: 700;
+    transition: all 0.2s;
+}
+
+/* Logic to hide counters if user disables them */
+body.hide-counts .cat-count {
+    display: none;
+}
+
 @media (max-width: 768px) {
     .main-content { grid-template-columns: 1fr; }
     .sidebar { position: static; margin-bottom: 40px; }

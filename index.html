@@ -113,8 +113,20 @@
                     <button onclick="switchSettingsTab('tab-themes')">Themes</button>
                     <button onclick="switchSettingsTab('tab-smart-tags')">Smart Tags</button>
                     <button onclick="switchSettingsTab('tab-notifications')">Notifications</button>
+                    <button onclick="switchSettingsTab('tab-general')">General</button>
                 </nav>
                 <div class="settings-content">
+
+                    <div id="tab-general" class="settings-tab">
+                        <h3>General Settings</h3>
+                        <div class="form-group" style="display: flex; align-items: center; justify-content: space-between; margin-top: 20px;">
+                            <label for="settingShowCounts" style="margin:0; cursor:pointer;">Show Category Counters</label>
+                            <input type="checkbox" id="settingShowCounts" style="width: auto;" onchange="toggleCountSetting()">
+                        </div>
+                        <p style="font-size:12px; color:var(--text-muted); margin-top:5px;">
+                            Display the number of active tasks next to each category in the sidebar.
+                        </p>
+                    </div>
                     
                     <div id="tab-help" class="settings-tab active">
                         <ul class="help-list" style="list-style: none; padding: 0;">
