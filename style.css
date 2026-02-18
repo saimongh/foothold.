@@ -162,8 +162,16 @@
 }
 
 /* --- RANNY VARIANTS --- */
+/* (Keeping all Ranny variants as requested) */
+.t-ranny-red { background: #0a0a0a; color: #ff5252; border-color: #ff5252; }
+.t-ranny-orange { background: #0a0a0a; color: #ff9100; border-color: #ff9100; }
+.t-ranny-yellow { background: #0a0a0a; color: #ffd600; border-color: #ffd600; }
+.t-ranny-mint { background: #0a0a0a; color: #64ffda; border-color: #64ffda; }
+.t-ranny-green { background: #0a0a0a; color: #00e676; border-color: #00e676; }
+.t-ranny-cyan { background: #0a0a0a; color: #00e5ff; border-color: #00e5ff; }
+.t-ranny-blue { background: #0a0a0a; color: #2979ff; border-color: #2979ff; }
+.t-ranny-purple { background: #0a0a0a; color: #7c4dff; border-color: #7c4dff; }
 
-/* 1. Ranny Red */
 [data-theme="ranny-red"] {
     --bg-body: #0a0a0a; --bg-sidebar: #141414; --bg-card: #1c1c1c;
     --text-main: #ffffff; --text-muted: #9e9e9e; --border-color: #333333;
@@ -173,8 +181,6 @@
     --progress-bg: #333333; --progress-fill: #ff5252;
     --toast-bg: #ff5252; --toast-text: #000000; --danger-color: #ff1744;
 }
-
-/* 2. Ranny Orange */
 [data-theme="ranny-orange"] {
     --bg-body: #0a0a0a; --bg-sidebar: #141414; --bg-card: #1c1c1c;
     --text-main: #ffffff; --text-muted: #9e9e9e; --border-color: #333333;
@@ -184,8 +190,6 @@
     --progress-bg: #333333; --progress-fill: #ff9100;
     --toast-bg: #ff9100; --toast-text: #000000; --danger-color: #ff1744;
 }
-
-/* 3. Ranny Yellow */
 [data-theme="ranny-yellow"] {
     --bg-body: #0a0a0a; --bg-sidebar: #141414; --bg-card: #1c1c1c;
     --text-main: #ffffff; --text-muted: #9e9e9e; --border-color: #333333;
@@ -195,19 +199,15 @@
     --progress-bg: #333333; --progress-fill: #ffd600;
     --toast-bg: #ffd600; --toast-text: #000000; --danger-color: #ff1744;
 }
-
-/* 4. Ranny Mint */
 [data-theme="ranny-mint"] {
     --bg-body: #0a0a0a; --bg-sidebar: #141414; --bg-card: #1c1c1c;
     --text-main: #ffffff; --text-muted: #9e9e9e; --border-color: #333333;
-    --accent-color: #5ba890; --checkmark-color: #000000;
+    --accent-color: #64ffda; --checkmark-color: #000000;
     --shadow: 0 4px 25px rgba(100, 255, 218, 0.15); --modal-overlay: rgba(0, 0, 0, 0.95);
     --tag-bg: #1a2e28; --tag-text: #64ffda;
     --progress-bg: #333333; --progress-fill: #64ffda;
     --toast-bg: #64ffda; --toast-text: #000000; --danger-color: #ff1744;
 }
-
-/* 5. Ranny Green */
 [data-theme="ranny-green"] {
     --bg-body: #0a0a0a; --bg-sidebar: #141414; --bg-card: #1c1c1c;
     --text-main: #ffffff; --text-muted: #9e9e9e; --border-color: #333333;
@@ -217,8 +217,6 @@
     --progress-bg: #333333; --progress-fill: #00e676;
     --toast-bg: #00e676; --toast-text: #000000; --danger-color: #ff1744;
 }
-
-/* 6. Ranny Light Blue (Cyan) */
 [data-theme="ranny-cyan"] {
     --bg-body: #0a0a0a; --bg-sidebar: #141414; --bg-card: #1c1c1c;
     --text-main: #ffffff; --text-muted: #9e9e9e; --border-color: #333333;
@@ -228,8 +226,6 @@
     --progress-bg: #333333; --progress-fill: #00e5ff;
     --toast-bg: #00e5ff; --toast-text: #000000; --danger-color: #ff1744;
 }
-
-/* 7. Ranny Blue */
 [data-theme="ranny-blue"] {
     --bg-body: #0a0a0a; --bg-sidebar: #141414; --bg-card: #1c1c1c;
     --text-main: #ffffff; --text-muted: #9e9e9e; --border-color: #333333;
@@ -239,8 +235,6 @@
     --progress-bg: #333333; --progress-fill: #2979ff;
     --toast-bg: #2979ff; --toast-text: #000000; --danger-color: #ff1744;
 }
-
-/* 8. Ranny Purple */
 [data-theme="ranny-purple"] {
     --bg-body: #0a0a0a; --bg-sidebar: #141414; --bg-card: #1c1c1c;
     --text-main: #ffffff; --text-muted: #9e9e9e; --border-color: #333333;
@@ -259,12 +253,28 @@ body {
     background-color: var(--bg-body);
     color: var(--text-main);
     min-height: 100vh;
-    padding: 40px 20px;
+    display: block; 
+    position: relative;
     transition: background-color 0.3s ease, color 0.3s ease;
-    overscroll-behavior-y: none;
 }
 
-.container { max-width: 1200px; margin: 0 auto; }
+/* Custom Scrollbar for Desktop/Web */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+::-webkit-scrollbar-track {
+    background: transparent; 
+}
+::-webkit-scrollbar-thumb {
+    background: var(--border-color); 
+    border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: var(--text-muted); 
+}
+
+.container { max-width: 1200px; margin: 0 auto; padding: 20px; }
 
 header {
     display: flex;
@@ -332,6 +342,29 @@ h1 {
     margin-bottom: 20px;
     border-bottom: 1px solid var(--border-color);
     padding-bottom: 15px;
+}
+
+/* Toggle Categories Button */
+.btn-toggle-cats {
+    width: 100%;
+    padding: 12px;
+    background: transparent;
+    border: 1px solid var(--border-color);
+    color: var(--text-main);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    font-family: 'Lato', sans-serif;
+    font-weight: 700;
+    margin-bottom: 15px;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+.btn-toggle-cats:hover {
+    border-color: var(--accent-color);
+    background: var(--bg-card);
 }
 
 /* TAG FILTER SYSTEM */
@@ -642,6 +675,14 @@ input:focus, textarea:focus, select:focus { outline: none; border-bottom-color: 
 .modal-subtask-item button { color: var(--text-muted); background: none; border: none; cursor: pointer; padding: 5px; }
 .modal-subtask-item button:hover { color: var(--danger-color); }
 
+/* REMINDER ROWS (Google Calendar Style) */
+.reminder-row { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; }
+.reminder-row input[type="number"] { width: 70px; text-align: center; }
+.reminder-row select { flex-grow: 1; }
+.btn-remove-reminder { background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 5px; }
+.btn-remove-reminder:hover { color: var(--danger-color); }
+.btn-add-reminder { background: none; border: none; color: var(--accent-color); font-size: 13px; font-weight: 700; cursor: pointer; padding: 5px 0; }
+
 /* SETTINGS MODAL */
 .settings-container { display: grid; grid-template-columns: 150px 1fr; gap: 30px; min-height: 300px; }
 .settings-nav button { display: block; width: 100%; text-align: left; background: none; border: none; padding: 10px 0; color: var(--text-muted); font-size: 14px; cursor: pointer; border-left: 2px solid transparent; padding-left: 10px; transition: all 0.2s; }
@@ -672,6 +713,16 @@ input:focus, textarea:focus, select:focus { outline: none; border-bottom-color: 
 .t-cafe { background: #EBE7DE; color: #4A3C31; border-color: #9C7C58; }
 .t-ranny { background: #0a0a0a; color: #ff70b8; border-color: #ff70b8; }
 
+/* Ranny Variant Previews */
+.t-ranny-red { background: #0a0a0a; color: #ff5252; border-color: #ff5252; }
+.t-ranny-orange { background: #0a0a0a; color: #ff9100; border-color: #ff9100; }
+.t-ranny-yellow { background: #0a0a0a; color: #ffd600; border-color: #ffd600; }
+.t-ranny-mint { background: #0a0a0a; color: #64ffda; border-color: #64ffda; }
+.t-ranny-green { background: #0a0a0a; color: #00e676; border-color: #00e676; }
+.t-ranny-cyan { background: #0a0a0a; color: #00e5ff; border-color: #00e5ff; }
+.t-ranny-blue { background: #0a0a0a; color: #2979ff; border-color: #2979ff; }
+.t-ranny-purple { background: #0a0a0a; color: #7c4dff; border-color: #7c4dff; }
+
 /* --- SIDEBAR COUNTERS --- */
 .cat-count {
     font-size: 11px;
@@ -689,22 +740,38 @@ body.hide-counts .cat-count {
     display: none;
 }
 
-/* --- COMPLETED FILTER STYLING --- */
+/* --- FIX: SCROLLING & LAYOUT (Web) --- */
 
-/* Default State: Text matches the rest, Icon is muted */
+html {
+    width: 100vw;
+    overflow-x: hidden;
+}
+
+body {
+    overflow-y: auto; 
+    overflow-x: hidden;
+    width: 100vw;
+    margin: 0;
+}
+
+/* 5. Ensure containers fit */
+#sidebar, .sidebar, .main-content {
+    width: 100%;
+    max-width: 100vw;
+}
+
+/* --- COMPLETED FILTER STYLING --- */
 #completedFilter {
     color: var(--text-main);
     font-weight: 400;
     transition: color 0.2s ease;
 }
 
-/* Active State: Text becomes Accent */
 #completedFilter.active {
     color: var(--accent-color);
     font-weight: 700;
 }
 
-/* Active State: Make the Checkmark Icon match the Accent too */
 .category-row.active-state .fa-check {
     color: var(--accent-color) !important;
     transition: color 0.2s ease;

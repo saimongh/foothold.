@@ -15,6 +15,10 @@ let searchQuery = '';
 let sortBy = 'manual';
 let editingId = null;
 let tempSubtasks = [];
+let tempReminders = []; 
+
+// Notification Polling State (Prevent duplicate alerts in same session)
+let firedNotifications = new Set(); 
 
 // Apply settings immediately
 if (!showCounts) document.body.classList.add('hide-counts');
@@ -74,7 +78,6 @@ document.addEventListener('keydown', (e) => {
 });
 
 // --- SUBTASK "ENTER" FIX ---
-// Allows pressing Enter in the subtask input to add it instead of closing the modal
 const subInput = document.getElementById('subtaskInput');
 if(subInput) {
     subInput.addEventListener('keydown', (e) => {
@@ -95,7 +98,10 @@ document.addEventListener('click', (e) => { if (!tagInput.contains(e.target) && 
 tagInput.addEventListener('input', () => { renderSuggestions(tagInput.value); });
 tagInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); processTagInput(tagInput.value); }
-    if (e.key === 'Backspace' && tagInput.value === '' && selectedTags.size > 0) { const lastTag = Array.from(selectedTags).pop(); removeTag(lastTag); }
+    if (e.key === 'Backspace' && tagInput.value === '' && selectedTags.size > 0) { 
+        const lastTag = Array.from(selectedTags).pop(); 
+        removeTag(lastTag, true); 
+    }
 });
 
 function processTagInput(val) {
@@ -109,15 +115,16 @@ function renderSuggestions(filterText = '') {
     const availableCats = categories.filter(c => !selectedTags.has(c.id));
     const matches = availableCats.filter(c => c.name.toLowerCase().includes(term));
     if (matches.length === 0) { suggestionsDropdown.style.display = 'none'; return; }
-    suggestionsDropdown.innerHTML = matches.map(c => `<div class="suggestion-item" onclick="addTag('${c.id}')">${c.name}</div>`).join('');
+    
+    // STOP PROPAGATION on click to keep menu open
+    suggestionsDropdown.innerHTML = matches.map(c => `<div class="suggestion-item" onclick="addTag('${c.id}'); event.stopPropagation()">${c.name}</div>`).join('');
     suggestionsDropdown.style.display = 'block';
 }
 
 function toggleCategoryFilter(id) {
-    // Exclusive switching logic for Sidebar
     const isOnlySelected = selectedTags.size === 1 && selectedTags.has(id);
     if (isOnlySelected) {
-        removeTag(id);
+        removeTag(id, false); 
     } else {
         selectedTags.clear();
         addTag(id);
@@ -125,17 +132,35 @@ function toggleCategoryFilter(id) {
 }
 
 function addTag(id) {
-    selectedTags.add(id); renderTags(); tagInput.value = ''; renderSuggestions(); renderItems(); updateSidebarStyles();
+    selectedTags.add(id); 
+    renderTags(); 
+    tagInput.value = ''; 
+    renderSuggestions(); 
+    renderItems(); 
+    updateSidebarStyles();
+    const input = document.getElementById('catFilterInput');
+    if(input) input.focus();
 }
 
-function removeTag(id) {
-    selectedTags.delete(id); renderTags(); renderItems(); updateSidebarStyles();
+function removeTag(id, refocus = false) {
+    selectedTags.delete(id); 
+    renderTags(); 
+    renderItems(); 
+    updateSidebarStyles();
+
+    if (refocus) {
+        const input = document.getElementById('catFilterInput');
+        if(input) {
+            input.focus();
+            renderSuggestions(input.value); 
+        }
+    }
 }
 
 function renderTags() {
     activeTagsContainer.innerHTML = Array.from(selectedTags).map(id => {
         const cat = categories.find(c => c.id === id); if (!cat) return '';
-        return `<div class="filter-tag"><span>${cat.name}</span><button onclick="removeTag('${id}')"><i class="fas fa-times"></i></button></div>`;
+        return `<div class="filter-tag"><span>${cat.name}</span><button onclick="removeTag('${id}', true); event.stopPropagation()"><i class="fas fa-times"></i></button></div>`;
     }).join('');
 }
 
@@ -149,24 +174,19 @@ function toggleCompletedFilter() {
 
 function updateSidebarStyles() {
     const isAllActive = selectedTags.size === 0 && !showCompleted;
-    
-    // 1. Update "All Active"
     const allFilterBtn = document.getElementById('allFilter');
     if (allFilterBtn) allFilterBtn.classList.toggle('active', isAllActive);
     
-    // 2. Update "Completed" (Text + Parent Row for icon styling)
     const completedBtn = document.getElementById('completedFilter');
     const completedRow = completedBtn ? completedBtn.closest('.category-row') : null;
     
     if (completedBtn) {
         completedBtn.classList.toggle('active', showCompleted);
-        // Toggle class on the parent row to style the checkmark icon
         if (completedRow) {
             completedRow.classList.toggle('active-state', showCompleted);
         }
     }
 
-    // 3. Update Category Tags
     document.querySelectorAll('.category-name').forEach(el => {
         const catId = el.closest('.category-row')?.dataset.catId;
         if(catId) el.classList.toggle('active', selectedTags.has(catId));
@@ -233,6 +253,11 @@ function renderItems() {
             // Date text is now always muted/grey
             dateHtml = `<span class="date-badge"><i class="far fa-calendar"></i> ${dateStr} ${timeStr}</span>`;
         }
+        
+        let notifIcon = '';
+        if (item.reminders && item.reminders.length > 0 && !item.completed) {
+            notifIcon = `<i class="fas fa-bell" style="font-size:10px; color:var(--text-muted); margin-left:5px;"></i>`;
+        }
 
         const isDragEnabled = sortBy === 'manual' && !searchQuery;
 
@@ -251,6 +276,7 @@ function renderItems() {
                 <div>
                     <span class="item-type">${categoryName}</span>
                     ${dateHtml}
+                    ${notifIcon}
                     ${statusHtml}
                 </div>
             </div>
@@ -305,6 +331,20 @@ function renderSidebar() {
         handle.addEventListener('touchstart', (e) => handleTouchStart(e, row, 'category', container), {passive: false});
     });
 }
+
+function toggleCategories() {
+    const sec = document.getElementById('categoriesExpandable');
+    const icon = document.getElementById('categoriesToggleIcon');
+    
+    if (sec.style.display === 'none') {
+        sec.style.display = 'block';
+        icon.classList.replace('fa-chevron-down', 'fa-chevron-up');
+    } else {
+        sec.style.display = 'none';
+        icon.classList.replace('fa-chevron-up', 'fa-chevron-down');
+    }
+}
+
 
 // --- AUTO SCROLL ENGINE ---
 let scrollVelocity = 0; let scrollFrame = null;
@@ -466,6 +506,89 @@ function showToast(message, onUndo) {
     setTimeout(() => { if (toast.parentElement) toast.remove(); }, 5000);
 }
 
+// --- REMINDER LOGIC (Google Calendar Style) ---
+function addReminderRow(val = 10, unit = 'minutes') {
+    const list = document.getElementById('reminderList');
+    const div = document.createElement('div');
+    div.className = 'reminder-row';
+    div.innerHTML = `
+        <input type="number" class="reminder-val" value="${val}" min="1">
+        <select class="reminder-unit">
+            <option value="minutes" ${unit==='minutes'?'selected':''}>minutes</option>
+            <option value="hours" ${unit==='hours'?'selected':''}>hours</option>
+            <option value="days" ${unit==='days'?'selected':''}>days</option>
+            <option value="weeks" ${unit==='weeks'?'selected':''}>weeks</option>
+        </select>
+        <button type="button" class="btn-remove-reminder" onclick="this.parentElement.remove()"><i class="fas fa-times"></i></button>
+    `;
+    list.appendChild(div);
+}
+
+function getRemindersFromDOM() {
+    const rows = document.querySelectorAll('.reminder-row');
+    return Array.from(rows).map(row => ({
+        val: parseInt(row.querySelector('.reminder-val').value) || 10,
+        unit: row.querySelector('.reminder-unit').value
+    }));
+}
+
+// --- BROWSER NOTIFICATION POLLING ---
+function requestNotificationPermission() {
+    if (!("Notification" in window)) {
+        alert("This browser does not support desktop notification");
+    } else if (Notification.permission !== "denied") {
+        Notification.requestPermission().then(permission => {
+            if (permission === "granted") {
+                new Notification("Notifications Enabled", { body: "You will now receive alerts for tasks." });
+            }
+        });
+    }
+}
+
+// Check for reminders every 30 seconds
+setInterval(checkReminders, 30000);
+
+function checkReminders() {
+    if (Notification.permission !== "granted") return;
+
+    const now = new Date();
+    // Round down to current minute timestamp for easier comparison
+    const currentMinuteTs = Math.floor(now.getTime() / 60000) * 60000;
+
+    items.forEach(item => {
+        if (item.completed || !item.dueDate || !item.dueTime) return;
+        if (!item.reminders || item.reminders.length === 0) return;
+
+        // Calculate Task Due Time
+        const dueTime = new Date(`${item.dueDate}T${item.dueTime}`).getTime();
+
+        item.reminders.forEach((rem, idx) => {
+            let offsetMs = 0;
+            if (rem.unit === 'minutes') offsetMs = rem.val * 60 * 1000;
+            if (rem.unit === 'hours') offsetMs = rem.val * 60 * 60 * 1000;
+            if (rem.unit === 'days') offsetMs = rem.val * 24 * 60 * 60 * 1000;
+            if (rem.unit === 'weeks') offsetMs = rem.val * 7 * 24 * 60 * 60 * 1000;
+
+            const notifyTime = dueTime - offsetMs;
+            
+            // Check if reminder is due NOW (within the last 60 seconds window)
+            // AND check if we haven't already fired it in this session
+            const uniqueNotifId = `${item.id}_${idx}`;
+
+            if (notifyTime <= now.getTime() && notifyTime > (now.getTime() - 60000)) {
+                if (!firedNotifications.has(uniqueNotifId)) {
+                    new Notification(item.title, {
+                        body: `Due in ${rem.val} ${rem.unit}`,
+                        icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">✓</text></svg>'
+                    });
+                    firedNotifications.add(uniqueNotifId);
+                }
+            }
+        });
+    });
+}
+
+
 // --- CRUD & LOGIC ---
 function openNewItem(preselectedType) {
     editingId = null; tempSubtasks = [];
@@ -474,6 +597,11 @@ function openNewItem(preselectedType) {
     if (preselectedType) document.getElementById('itemType').value = preselectedType;
     document.getElementById('modalTitle').textContent = 'New Item';
     renderTempSubtasks();
+    
+    // Default Reminders: Start with one (30 min)
+    document.getElementById('reminderList').innerHTML = '';
+    addReminderRow(30, 'minutes');
+
     document.getElementById('itemModal').classList.add('active');
     setTimeout(() => document.getElementById('itemTitle').focus(), 100);
 }
@@ -488,6 +616,16 @@ function editItem(id) {
         document.getElementById('itemTime').value = item.dueTime || '';
         document.getElementById('itemDescription').value = item.description;
         tempSubtasks = [...item.subtasks];
+        
+        // Load Reminders
+        const list = document.getElementById('reminderList');
+        list.innerHTML = '';
+        if(item.reminders && item.reminders.length > 0) {
+            item.reminders.forEach(r => addReminderRow(r.val, r.unit));
+        } else {
+             // Optional: add default row if editing and none exist? Or leave empty.
+        }
+
         document.getElementById('modalTitle').textContent = 'Edit Item';
         renderTempSubtasks();
         document.getElementById('itemModal').classList.add('active');
@@ -510,7 +648,6 @@ function clearDateTime() {
     const timeInput = document.getElementById('itemTime');
     dateInput.value = '';
     timeInput.value = '';
-    // Fix: Force reset validation state to prevent stuck "invalid" UI
     dateInput.setCustomValidity('');
     timeInput.setCustomValidity('');
     dateInput.removeAttribute('required');
@@ -521,6 +658,8 @@ function closeModal() { document.getElementById('itemModal').classList.remove('a
 
 document.getElementById('itemForm').onsubmit = (e) => {
     e.preventDefault();
+    const reminders = getRemindersFromDOM();
+    
     const item = {
         id: editingId || Date.now(),
         title: document.getElementById('itemTitle').value,
@@ -529,12 +668,20 @@ document.getElementById('itemForm').onsubmit = (e) => {
         dueTime: document.getElementById('itemTime').value,
         description: document.getElementById('itemDescription').value,
         subtasks: tempSubtasks,
+        reminders: reminders, // Store reminders
         completed: editingId ? items.find(i => i.id === editingId).completed : false,
         notified: editingId ? items.find(i => i.id === editingId).notified : false,
         createdAt: Date.now()
     };
+    
+    // Save to Array
     if (editingId) items[items.findIndex(i => i.id === editingId)] = item; else items.push(item);
-    saveData(); closeModal(); renderItems(); renderSidebar(); // Update counts
+    
+    saveData(); 
+
+    closeModal(); 
+    renderItems(); 
+    renderSidebar(); 
 };
 
 function addSubtask() { const val = document.getElementById('subtaskInput').value.trim(); if(val) { tempSubtasks.push({ text: val, completed: false, id: Date.now() }); document.getElementById('subtaskInput').value=''; renderTempSubtasks(); } }
@@ -601,16 +748,26 @@ function setTheme(theme) {
     document.body.setAttribute('data-theme', theme);
     localStorage.setItem('theme', theme);
     const icon = document.getElementById('themeBtn').querySelector('i');
-    
-    // Updated Dark Theme list for Ranny Variants
-    const darkThemes = [
-        'dark', 'dark-green', 'dark-purple', 'dark-blue', 'dark-red', 'dark-cafe', 'ranny',
-        'ranny-red', 'ranny-orange', 'ranny-yellow', 'ranny-mint', 
-        'ranny-green', 'ranny-cyan', 'ranny-blue', 'ranny-purple'
-    ];
 
-    if(darkThemes.includes(theme)) icon.classList.replace('fa-moon', 'fa-sun');
-    else icon.classList.replace('fa-sun', 'fa-moon');
+    icon.classList.remove('fa-moon', 'fa-sun', 'fa-repeat');
+
+    // 2. Check if it is ANY Ranny variant
+    if (theme.startsWith('ranny')) {
+        // Show the "Cycle/Switch" icon
+        icon.classList.add('fa-repeat'); 
+    } 
+    // 3. Otherwise, check standard Dark themes
+    else {
+        const darkThemes = [
+            'dark', 'dark-green', 'dark-purple', 'dark-blue', 'dark-red', 'dark-cafe'
+        ];
+
+        if (darkThemes.includes(theme)) {
+            icon.classList.add('fa-moon');
+        } else {
+            icon.classList.add('fa-sun');
+        }
+    }
 }
 function toggleTheme() {
     const current = localStorage.getItem('theme') || 'light';
@@ -622,7 +779,7 @@ function toggleTheme() {
         'light-blue': 'dark-blue', 'dark-blue': 'light-blue',
         'pink': 'dark-red', 'dark-red': 'pink',
         'light-cafe': 'dark-cafe', 'dark-cafe': 'light-cafe', 
-        'ranny': 'ranny'
+        'ranny': 'ranny-red', 'ranny-red': 'ranny-orange', 'ranny-orange':'ranny-yellow', 'ranny-yellow':'ranny-mint', 'ranny-mint':'ranny-green', 'ranny-green':'ranny-cyan', 'ranny-cyan':'ranny-blue', 'ranny-blue':'ranny-purple', 'ranny-purple':'ranny'
     };
     if (themePairs[current]) nextTheme = themePairs[current];
     else nextTheme = current.includes('dark') ? 'light' : 'dark';
