@@ -806,9 +806,9 @@ function setTheme(theme) {
         ];
 
         if (darkThemes.includes(theme)) {
-            icon.classList.add('fa-sun');
-        } else {
             icon.classList.add('fa-moon');
+        } else {
+            icon.classList.add('fa-sun');
         }
     }
 }
