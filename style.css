@@ -162,9 +162,7 @@
 }
 
 /* --- RANNY VARIANTS --- */
-/* Ranny Base */
 .t-ranny { background: #0a0a0a; color: #ff70b8; border-color: #ff70b8; }
-
 .t-ranny-red { background: #0a0a0a; color: #ff5252; border-color: #ff5252; }
 .t-ranny-orange { background: #0a0a0a; color: #ff9100; border-color: #ff9100; }
 .t-ranny-yellow { background: #0a0a0a; color: #ffd600; border-color: #ffd600; }
@@ -586,7 +584,7 @@ h1 {
 }
 .date-badge.overdue { color: var(--danger-color); font-weight: bold; }
 
-/* --- Status Tags (Text Only) --- */
+/* --- Status Tags & Pins --- */
 .status-text {
     font-size: 11px;
     font-weight: 700;
@@ -597,10 +595,26 @@ h1 {
     gap: 4px;
     letter-spacing: 0.5px;
 }
-
 .status-text.past-due { color: #800000; } /* Maroon */
 .status-text.urgent { color: var(--danger-color); }   /* Red */
 .status-text.upcoming { color: #f59e0b; } /* Yellow/Orange */
+
+/* Pinned Visual Indicator */
+.item-pin-tag {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    padding: 4px 8px;
+    background: var(--accent-color);
+    color: var(--bg-body);
+    border-radius: 2px;
+    align-self: flex-start;
+    margin-right: 10px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
 
 /* Ensure date remains muted always */
 .date-badge {
@@ -626,6 +640,13 @@ h1 {
 .item-actions button:hover { color: var(--accent-color); transform: scale(1.1); }
 .btn-check:hover { color: #4caf50 !important; }
 .btn-delete:hover { color: var(--danger-color) !important; }
+
+/* Pin Button States */
+.btn-pin:hover { color: var(--accent-color); }
+.btn-pin.active { 
+    color: var(--accent-color) !important; 
+    transform: rotate(-15deg); 
+}
 
 .item-meta { margin-bottom: 10px; display: flex; flex-direction: column; gap: 5px; }
 .item-type { font-size: 10px; text-transform: uppercase; letter-spacing: 2px; padding: 4px 8px; background: var(--tag-bg); color: var(--tag-text); border-radius: 2px; align-self: flex-start; margin-right: 15px;}
@@ -715,9 +736,9 @@ input:focus, textarea:focus, select:focus { outline: none; border-bottom-color: 
 .t-red { background: #1a0505; color: #ff5252; border-color: #b71c1c; }
 .t-brown { background: #231B15; color: #D7CCC8; border-color: #4E342E; }
 .t-cafe { background: #EBE7DE; color: #4A3C31; border-color: #9C7C58; }
-.t-ranny { background: #0a0a0a; color: #ff70b8; border-color: #ff70b8; }
 
 /* Ranny Variant Previews */
+.t-ranny { background: #0a0a0a; color: #ff70b8; border-color: #ff70b8; }
 .t-ranny-red { background: #0a0a0a; color: #ff5252; border-color: #ff5252; }
 .t-ranny-orange { background: #0a0a0a; color: #ff9100; border-color: #ff9100; }
 .t-ranny-yellow { background: #0a0a0a; color: #ffd600; border-color: #ffd600; }
@@ -745,7 +766,6 @@ body.hide-counts .cat-count {
 }
 
 /* --- FIX: SCROLLING & LAYOUT (Web) --- */
-
 html {
     width: 100vw;
     overflow-x: hidden;
@@ -788,4 +808,7 @@ body {
     header { flex-direction: column; }
     .settings-container { grid-template-columns: 1fr; }
     .settings-content { border-left: none; padding-left: 0; border-top: 1px solid var(--border-color); padding-top: 20px; }
+    
+    /* Always show category action icons on mobile */
+    .cat-actions { opacity: 1; }
 }

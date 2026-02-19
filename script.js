@@ -17,13 +17,12 @@ let editingId = null;
 let tempSubtasks = [];
 let tempReminders = []; 
 
-// Notification Polling State (Prevent duplicate alerts in same session)
+// Notification Polling State
 let firedNotifications = new Set(); 
 
 // Apply settings immediately
 if (!showCounts) document.body.classList.add('hide-counts');
 
-// Init Settings Inputs (if modal is open/ready)
 function initSettingsInputs() {
     if(document.getElementById('settingUrgentHours')) {
         document.getElementById('settingUrgentHours').value = tagSettings.urgentHours;
@@ -106,7 +105,7 @@ tagInput.addEventListener('keydown', (e) => {
 
 function processTagInput(val) {
     const terms = val.split(',').map(t => t.trim().toLowerCase()).filter(t => t);
-    terms.forEach(term => { const match = categories.find(c => c.name.toLowerCase() === term); if (match) addTag(match.id); });
+    terms.forEach(term => { const match = categories.find(c => c.name.toLowerCase() === term); if (match) addTag(match.id, true); });
     tagInput.value = ''; renderSuggestions();
 }
 
@@ -116,8 +115,8 @@ function renderSuggestions(filterText = '') {
     const matches = availableCats.filter(c => c.name.toLowerCase().includes(term));
     if (matches.length === 0) { suggestionsDropdown.style.display = 'none'; return; }
     
-    // STOP PROPAGATION on click to keep menu open
-    suggestionsDropdown.innerHTML = matches.map(c => `<div class="suggestion-item" onclick="addTag('${c.id}'); event.stopPropagation()">${c.name}</div>`).join('');
+    // Pass refocus=true so the keyboard stays up when clicking a dropdown item
+    suggestionsDropdown.innerHTML = matches.map(c => `<div class="suggestion-item" onclick="addTag('${c.id}', true); event.stopPropagation()">${c.name}</div>`).join('');
     suggestionsDropdown.style.display = 'block';
 }
 
@@ -127,19 +126,24 @@ function toggleCategoryFilter(id) {
         removeTag(id, false); 
     } else {
         selectedTags.clear();
-        addTag(id);
+        // Pass refocus=false so clicking the sidebar doesn't pop open the search bar
+        addTag(id, false); 
     }
 }
 
-function addTag(id) {
+// Updated to accept refocus parameter
+function addTag(id, refocus = false) {
     selectedTags.add(id); 
     renderTags(); 
     tagInput.value = ''; 
     renderSuggestions(); 
     renderItems(); 
     updateSidebarStyles();
-    const input = document.getElementById('catFilterInput');
-    if(input) input.focus();
+    
+    if (refocus) {
+        const input = document.getElementById('catFilterInput');
+        if(input) input.focus();
+    }
 }
 
 function removeTag(id, refocus = false) {
@@ -221,7 +225,12 @@ function renderItems() {
 
     if (sortBy === 'date') {
         filtered.sort((a, b) => {
-            if (!a.dueDate) return 1; if (!b.dueDate) return -1;
+            // Pinned items ALWAYS stay at the very top, even when sorting by date
+            if (a.pinned && !b.pinned) return -1;
+            if (!a.pinned && b.pinned) return 1;
+            
+            if (!a.dueDate) return 1; 
+            if (!b.dueDate) return -1;
             return new Date(a.dueDate) - new Date(b.dueDate);
         });
     }
@@ -250,7 +259,6 @@ function renderItems() {
             
             const dateStr = dateObj.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
             const timeStr = item.dueTime ? new Date('1970-01-01T' + item.dueTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '';
-            // Date text is now always muted/grey
             dateHtml = `<span class="date-badge"><i class="far fa-calendar"></i> ${dateStr} ${timeStr}</span>`;
         }
         
@@ -258,6 +266,8 @@ function renderItems() {
         if (item.reminders && item.reminders.length > 0 && !item.completed) {
             notifIcon = `<i class="fas fa-bell" style="font-size:10px; color:var(--text-muted); margin-left:5px;"></i>`;
         }
+        
+        let pinTagHtml = item.pinned ? `<span class="item-pin-tag"><i class="fas fa-thumbtack"></i> PINNED</span>` : '';
 
         const isDragEnabled = sortBy === 'manual' && !searchQuery;
 
@@ -266,6 +276,7 @@ function renderItems() {
             <div class="item-header">
                 <div class="item-title">${item.title}</div>
                 <div class="item-actions">
+                    <button onclick="togglePin(${item.id})" class="btn-pin ${item.pinned ? 'active' : ''}" title="${item.pinned ? 'Unpin' : 'Pin to Top'}"><i class="fas fa-thumbtack"></i></button>
                     <button onclick="toggleItemStatus(${item.id})" class="btn-check" title="Complete"><i class="fas ${item.completed ? 'fa-undo' : 'fa-check'}"></i></button>
                     <button onclick="editItem(${item.id})" title="Edit"><i class="fas fa-pen"></i></button>
                     <button onclick="deleteItem(${item.id})" class="btn-delete" title="Delete"><i class="fas fa-trash"></i></button>
@@ -274,6 +285,7 @@ function renderItems() {
             
             <div class="item-meta">
                 <div>
+                    ${pinTagHtml}
                     <span class="item-type">${categoryName}</span>
                     ${dateHtml}
                     ${notifIcon}
@@ -552,14 +564,12 @@ function checkReminders() {
     if (Notification.permission !== "granted") return;
 
     const now = new Date();
-    // Round down to current minute timestamp for easier comparison
     const currentMinuteTs = Math.floor(now.getTime() / 60000) * 60000;
 
     items.forEach(item => {
         if (item.completed || !item.dueDate || !item.dueTime) return;
         if (!item.reminders || item.reminders.length === 0) return;
 
-        // Calculate Task Due Time
         const dueTime = new Date(`${item.dueDate}T${item.dueTime}`).getTime();
 
         item.reminders.forEach((rem, idx) => {
@@ -570,9 +580,6 @@ function checkReminders() {
             if (rem.unit === 'weeks') offsetMs = rem.val * 7 * 24 * 60 * 60 * 1000;
 
             const notifyTime = dueTime - offsetMs;
-            
-            // Check if reminder is due NOW (within the last 60 seconds window)
-            // AND check if we haven't already fired it in this session
             const uniqueNotifId = `${item.id}_${idx}`;
 
             if (notifyTime <= now.getTime() && notifyTime > (now.getTime() - 60000)) {
@@ -622,8 +629,6 @@ function editItem(id) {
         list.innerHTML = '';
         if(item.reminders && item.reminders.length > 0) {
             item.reminders.forEach(r => addReminderRow(r.val, r.unit));
-        } else {
-             // Optional: add default row if editing and none exist? Or leave empty.
         }
 
         document.getElementById('modalTitle').textContent = 'Edit Item';
@@ -668,21 +673,58 @@ document.getElementById('itemForm').onsubmit = (e) => {
         dueTime: document.getElementById('itemTime').value,
         description: document.getElementById('itemDescription').value,
         subtasks: tempSubtasks,
-        reminders: reminders, // Store reminders
+        reminders: reminders, 
+        pinned: editingId ? (items.find(i => i.id === editingId).pinned || false) : false, 
         completed: editingId ? items.find(i => i.id === editingId).completed : false,
         notified: editingId ? items.find(i => i.id === editingId).notified : false,
         createdAt: Date.now()
     };
     
-    // Save to Array
-    if (editingId) items[items.findIndex(i => i.id === editingId)] = item; else items.push(item);
+    // Save to Array with Pinning Logic Priority
+    if (editingId) {
+        items[items.findIndex(i => i.id === editingId)] = item;
+    } else {
+        // Find the index right after the last pinned item
+        let insertIndex = 0;
+        while (insertIndex < items.length && items[insertIndex].pinned) {
+            insertIndex++;
+        }
+        // Insert the new item at the top of the "unpinned" section
+        items.splice(insertIndex, 0, item);
+    }
     
     saveData(); 
-
     closeModal(); 
     renderItems(); 
     renderSidebar(); 
 };
+
+// PINNING LOGIC
+function togglePin(id) {
+    const index = items.findIndex(i => i.id === id);
+    if (index === -1) return;
+    
+    const item = items[index];
+    item.pinned = !item.pinned;
+    
+    // Remove it from its current spot
+    items.splice(index, 1);
+    
+    if (item.pinned) {
+        // Move all the way to the very top
+        items.unshift(item);
+    } else {
+        // Move it back down to the top of the "unpinned" pile
+        let insertIndex = 0;
+        while (insertIndex < items.length && items[insertIndex].pinned) {
+            insertIndex++;
+        }
+        items.splice(insertIndex, 0, item);
+    }
+    
+    saveData();
+    renderItems();
+}
 
 function addSubtask() { const val = document.getElementById('subtaskInput').value.trim(); if(val) { tempSubtasks.push({ text: val, completed: false, id: Date.now() }); document.getElementById('subtaskInput').value=''; renderTempSubtasks(); } }
 function removeSubtask(idx) { tempSubtasks.splice(idx, 1); renderTempSubtasks(); }
@@ -749,6 +791,7 @@ function setTheme(theme) {
     localStorage.setItem('theme', theme);
     const icon = document.getElementById('themeBtn').querySelector('i');
 
+    // 1. Clean slate: Remove all possible icon classes to avoid conflicts
     icon.classList.remove('fa-moon', 'fa-sun', 'fa-repeat');
 
     // 2. Check if it is ANY Ranny variant
@@ -763,12 +806,13 @@ function setTheme(theme) {
         ];
 
         if (darkThemes.includes(theme)) {
-            icon.classList.add('fa-moon');
-        } else {
             icon.classList.add('fa-sun');
+        } else {
+            icon.classList.add('fa-moon');
         }
     }
 }
+
 function toggleTheme() {
     const current = localStorage.getItem('theme') || 'light';
     let nextTheme = 'light';
@@ -785,6 +829,7 @@ function toggleTheme() {
     else nextTheme = current.includes('dark') ? 'light' : 'dark';
     setTheme(nextTheme);
 }
+
 function triggerImport() { document.getElementById('importFile').click(); }
 function exportData() {
     const blob = new Blob([JSON.stringify({ items, categories, version: 1 }, null, 2)], { type: 'application/json' });
