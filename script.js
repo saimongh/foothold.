@@ -164,7 +164,7 @@ function removeTag(id, refocus = false) {
 function renderTags() {
     activeTagsContainer.innerHTML = Array.from(selectedTags).map(id => {
         const cat = categories.find(c => c.id === id); if (!cat) return '';
-        return `<div class="filter-tag"><span>${cat.name}</span><button onclick="removeTag('${id}', true); event.stopPropagation()"><i class="fas fa-times"></i></button></div>`;
+        return `<div class="filter-tag"><span>${cat.name}</span><button onclick="removeTag('${id}', false); event.stopPropagation()"><i class="fas fa-times"></i></button></div>`;
     }).join('');
 }
 
