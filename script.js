@@ -115,7 +115,6 @@ function renderSuggestions(filterText = '') {
     const matches = availableCats.filter(c => c.name.toLowerCase().includes(term));
     if (matches.length === 0) { suggestionsDropdown.style.display = 'none'; return; }
     
-    // Pass refocus=true so the keyboard stays up when clicking a dropdown item
     suggestionsDropdown.innerHTML = matches.map(c => `<div class="suggestion-item" onclick="addTag('${c.id}', true); event.stopPropagation()">${c.name}</div>`).join('');
     suggestionsDropdown.style.display = 'block';
 }
@@ -126,12 +125,10 @@ function toggleCategoryFilter(id) {
         removeTag(id, false); 
     } else {
         selectedTags.clear();
-        // Pass refocus=false so clicking the sidebar doesn't pop open the search bar
         addTag(id, false); 
     }
 }
 
-// Updated to accept refocus parameter
 function addTag(id, refocus = false) {
     selectedTags.add(id); 
     renderTags(); 
@@ -139,11 +136,7 @@ function addTag(id, refocus = false) {
     renderSuggestions(); 
     renderItems(); 
     updateSidebarStyles();
-    
-    if (refocus) {
-        const input = document.getElementById('catFilterInput');
-        if(input) input.focus();
-    }
+    if (refocus) { const input = document.getElementById('catFilterInput'); if(input) input.focus(); }
 }
 
 function removeTag(id, refocus = false) {
@@ -151,14 +144,7 @@ function removeTag(id, refocus = false) {
     renderTags(); 
     renderItems(); 
     updateSidebarStyles();
-
-    if (refocus) {
-        const input = document.getElementById('catFilterInput');
-        if(input) {
-            input.focus();
-            renderSuggestions(input.value); 
-        }
-    }
+    if (refocus) { const input = document.getElementById('catFilterInput'); if(input) { input.focus(); renderSuggestions(input.value); } }
 }
 
 function renderTags() {
@@ -197,7 +183,7 @@ function updateSidebarStyles() {
     });
 }
 
-// --- RENDER ITEMS ---
+// --- RENDER HELPERS ---
 function getStatusBadge(item) {
     if (!item.dueDate || item.completed) return '';
     const now = new Date();
@@ -213,22 +199,130 @@ function getStatusBadge(item) {
     return '';
 }
 
+function generateItemCardHTML(item, isDragEnabled) {
+    const categoryName = getCategoryName(item.type);
+    const statusHtml = getStatusBadge(item);
+    let progressHtml = '';
+    
+    if (item.subtasks && item.subtasks.length > 0) {
+        const completed = item.subtasks.filter(s => s.completed).length;
+        const pct = (completed / item.subtasks.length) * 100;
+        progressHtml = `<div class="progress-container" title="${completed}/${item.subtasks.length} completed"><div class="progress-bar" style="width: ${pct}%"></div></div>`;
+    }
+
+    let dateHtml = '';
+    if (item.dueDate) {
+        const dateObj = new Date(item.dueDate + (item.dueTime ? 'T' + item.dueTime : ''));
+        const dateStr = dateObj.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+        const timeStr = item.dueTime ? new Date('1970-01-01T' + item.dueTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '';
+        dateHtml = `<span class="date-badge"><i class="far fa-calendar"></i> ${dateStr} ${timeStr}</span>`;
+    }
+    
+    let notifIcon = '';
+    if (item.reminders && item.reminders.length > 0 && !item.completed) {
+        notifIcon = `<i class="fas fa-bell" style="font-size:10px; color:var(--text-muted); margin-left:5px;"></i>`;
+    }
+    
+    let pinTagHtml = item.pinned ? `<span class="item-pin-tag"><i class="fas fa-thumbtack"></i> PINNED</span>` : '';
+
+    return `
+    <div class="item-card ${item.completed ? 'completed-card' : ''}" ${isDragEnabled ? 'draggable="true"' : ''} data-id="${item.id}">
+        <div class="item-header">
+            <div class="item-title">${item.title}</div>
+            <div class="item-actions">
+                <button onclick="togglePin(${item.id})" class="btn-pin ${item.pinned ? 'active' : ''}" title="${item.pinned ? 'Unpin' : 'Pin to Top'}"><i class="fas fa-thumbtack"></i></button>
+                <button onclick="toggleItemStatus(${item.id})" class="btn-check" title="Complete"><i class="fas ${item.completed ? 'fa-undo' : 'fa-check'}"></i></button>
+                <button onclick="editItem(${item.id})" title="Edit"><i class="fas fa-pen"></i></button>
+                <button onclick="deleteItem(${item.id})" class="btn-delete" title="Delete"><i class="fas fa-trash"></i></button>
+            </div>
+        </div>
+        
+        <div class="item-meta">
+            <div>
+                ${pinTagHtml}
+                <span class="item-type">${categoryName}</span>
+                ${dateHtml}
+                ${notifIcon}
+                ${statusHtml}
+            </div>
+        </div>
+
+        ${progressHtml}
+        ${item.description ? `<div class="item-description">${parseMarkdown(item.description)}</div>` : ''}
+        ${item.subtasks.length > 0 ? `<div class="subtasks">${item.subtasks.map(st => `<div class="subtask" data-sub-id="${st.id}" onclick="toggleSubtask(${item.id}, ${st.id})"><input type="checkbox" ${st.completed ? 'checked' : ''} style="pointer-events: none;"><span>${st.text}</span></div>`).join('')}</div>` : ''}
+    </div>`;
+}
+
+// --- MAIN RENDER FUNCTION ---
 function renderItems() {
     const grid = document.getElementById('itemsGrid');
-    let filtered = items;
     
-    if (showCompleted) filtered = items.filter(i => i.completed);
-    else filtered = items.filter(i => !i.completed);
+    // --- COMPLETED VIEW (The "Report" Layout) ---
+    if (showCompleted) {
+        // 1. Group items by category
+        const groups = {};
+        categories.forEach(cat => groups[cat.id] = { name: cat.name, items: [] });
+        // Handle potential orphans/deleted categories
+        groups['unknown'] = { name: 'Uncategorized', items: [] };
 
+        const completedItems = items.filter(i => i.completed);
+        
+        // Filter by tags if selected
+        let finalDisplayItems = completedItems;
+        if (selectedTags.size > 0) finalDisplayItems = finalDisplayItems.filter(i => selectedTags.has(i.type));
+        if (searchQuery) finalDisplayItems = finalDisplayItems.filter(i => i.title.toLowerCase().includes(searchQuery));
+
+        if (finalDisplayItems.length === 0) {
+            grid.innerHTML = `<div class="empty-state"><i class="fas fa-check-circle"></i><p>No completed items found.</p></div>`;
+            // Remove grid layout for empty state
+            grid.style.display = 'block';
+            return;
+        }
+
+        // Sort items into groups
+        finalDisplayItems.forEach(item => {
+            if (groups[item.type]) groups[item.type].items.push(item);
+            else groups['unknown'].items.push(item);
+        });
+
+        // 2. Build HTML
+        let reportHtml = '';
+        for (const catId in groups) {
+            const group = groups[catId];
+            if (group.items.length === 0) continue;
+
+            reportHtml += `
+            <div class="report-section">
+                <div class="report-header">
+                    <div class="report-stat-line">
+                        You have completed <span class="report-count">${group.items.length}</span> ${group.name}!
+                    </div>
+                    <button class="btn-text" onclick="toggleReportGroup('${catId}')" id="btn-report-${catId}">
+                        View Completed
+                    </button>
+                </div>
+                <div class="report-grid" id="report-grid-${catId}" style="display: none;">
+                    ${group.items.map(item => generateItemCardHTML(item, false)).join('')}
+                </div>
+            </div>`;
+        }
+
+        grid.innerHTML = reportHtml;
+        grid.style.display = 'block'; // Block layout for the report sections
+        return; 
+    }
+
+    // --- ACTIVE VIEW (Standard Grid) ---
+    grid.style.display = 'grid'; // Restore grid layout for active items
+
+    let filtered = items.filter(i => !i.completed);
     if (selectedTags.size > 0) filtered = filtered.filter(i => selectedTags.has(i.type));
     if (searchQuery) filtered = filtered.filter(i => i.title.toLowerCase().includes(searchQuery) || (i.description && i.description.toLowerCase().includes(searchQuery)));
 
     if (sortBy === 'date') {
         filtered.sort((a, b) => {
-            // Pinned items ALWAYS stay at the very top, even when sorting by date
             if (a.pinned && !b.pinned) return -1;
             if (!a.pinned && b.pinned) return 1;
-            
             if (!a.dueDate) return 1; 
             if (!b.dueDate) return -1;
             return new Date(a.dueDate) - new Date(b.dueDate);
@@ -237,69 +331,16 @@ function renderItems() {
 
     if (filtered.length === 0) {
         grid.innerHTML = `<div class="empty-state"><i class="fas fa-layer-group"></i><p>${searchQuery ? 'No matches found.' : 'Clear mind. Empty list.'}</p></div>`;
+        grid.style.display = 'block'; // Center the empty state
         return;
     }
 
-    grid.innerHTML = filtered.map(item => {
-        const categoryName = getCategoryName(item.type);
-        const statusHtml = getStatusBadge(item);
-        let progressHtml = '';
-        if (item.subtasks && item.subtasks.length > 0) {
-            const completed = item.subtasks.filter(s => s.completed).length;
-            const pct = (completed / item.subtasks.length) * 100;
-            progressHtml = `<div class="progress-container" title="${completed}/${item.subtasks.length} completed"><div class="progress-bar" style="width: ${pct}%"></div></div>`;
-        }
+    // If drag is enabled
+    const isDragEnabled = sortBy === 'manual' && !searchQuery;
+    
+    grid.innerHTML = filtered.map(item => generateItemCardHTML(item, isDragEnabled)).join('');
 
-        let dateHtml = '';
-        if (item.dueDate) {
-            const dateObj = new Date(item.dueDate + (item.dueTime ? 'T' + item.dueTime : ''));
-            const today = new Date(); today.setHours(0,0,0,0);
-            const itemDateOnly = new Date(item.dueDate);
-            const isOverdue = itemDateOnly < today && !item.completed;
-            
-            const dateStr = dateObj.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-            const timeStr = item.dueTime ? new Date('1970-01-01T' + item.dueTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '';
-            dateHtml = `<span class="date-badge"><i class="far fa-calendar"></i> ${dateStr} ${timeStr}</span>`;
-        }
-        
-        let notifIcon = '';
-        if (item.reminders && item.reminders.length > 0 && !item.completed) {
-            notifIcon = `<i class="fas fa-bell" style="font-size:10px; color:var(--text-muted); margin-left:5px;"></i>`;
-        }
-        
-        let pinTagHtml = item.pinned ? `<span class="item-pin-tag"><i class="fas fa-thumbtack"></i> PINNED</span>` : '';
-
-        const isDragEnabled = sortBy === 'manual' && !searchQuery;
-
-        return `
-        <div class="item-card ${item.completed ? 'completed-card' : ''}" ${isDragEnabled ? 'draggable="true"' : ''} data-id="${item.id}">
-            <div class="item-header">
-                <div class="item-title">${item.title}</div>
-                <div class="item-actions">
-                    <button onclick="togglePin(${item.id})" class="btn-pin ${item.pinned ? 'active' : ''}" title="${item.pinned ? 'Unpin' : 'Pin to Top'}"><i class="fas fa-thumbtack"></i></button>
-                    <button onclick="toggleItemStatus(${item.id})" class="btn-check" title="Complete"><i class="fas ${item.completed ? 'fa-undo' : 'fa-check'}"></i></button>
-                    <button onclick="editItem(${item.id})" title="Edit"><i class="fas fa-pen"></i></button>
-                    <button onclick="deleteItem(${item.id})" class="btn-delete" title="Delete"><i class="fas fa-trash"></i></button>
-                </div>
-            </div>
-            
-            <div class="item-meta">
-                <div>
-                    ${pinTagHtml}
-                    <span class="item-type">${categoryName}</span>
-                    ${dateHtml}
-                    ${notifIcon}
-                    ${statusHtml}
-                </div>
-            </div>
-
-            ${progressHtml}
-            ${item.description ? `<div class="item-description">${parseMarkdown(item.description)}</div>` : ''}
-            ${item.subtasks.length > 0 ? `<div class="subtasks">${item.subtasks.map(st => `<div class="subtask" data-sub-id="${st.id}" onclick="toggleSubtask(${item.id}, ${st.id})"><input type="checkbox" ${st.completed ? 'checked' : ''} style="pointer-events: none;"><span>${st.text}</span></div>`).join('')}</div>` : ''}
-        </div>`;
-    }).join('');
-
-    if (sortBy === 'manual' && !searchQuery) {
+    if (isDragEnabled) {
         const cards = document.querySelectorAll('.item-card');
         cards.forEach(card => {
             card.addEventListener('dragstart', () => { setTimeout(() => card.classList.add('dragging'), 0); });
@@ -309,13 +350,28 @@ function renderItems() {
     }
 }
 
+// --- REPORT TOGGLE LOGIC ---
+function toggleReportGroup(catId) {
+    const grid = document.getElementById(`report-grid-${catId}`);
+    const btn = document.getElementById(`btn-report-${catId}`);
+    
+    if (grid.style.display === 'none') {
+        grid.style.display = 'grid';
+        btn.textContent = 'Hide Items';
+        btn.classList.add('active');
+    } else {
+        grid.style.display = 'none';
+        btn.textContent = 'View Completed';
+        btn.classList.remove('active');
+    }
+}
+
 function handleSearch(val) { searchQuery = val.toLowerCase().trim(); renderItems(); }
 
 // --- SIDEBAR ---
 function renderSidebar() {
     const container = document.getElementById('dynamicCategories');
     container.innerHTML = categories.map(cat => {
-        // Calculate active counts
         const activeCount = items.filter(i => i.type === cat.id && !i.completed).length;
         
         return `
@@ -347,7 +403,6 @@ function renderSidebar() {
 function toggleCategories() {
     const sec = document.getElementById('categoriesExpandable');
     const icon = document.getElementById('categoriesToggleIcon');
-    
     if (sec.style.display === 'none') {
         sec.style.display = 'block';
         icon.classList.replace('fa-chevron-down', 'fa-chevron-up');
@@ -356,7 +411,6 @@ function toggleCategories() {
         icon.classList.replace('fa-chevron-up', 'fa-chevron-down');
     }
 }
-
 
 // --- AUTO SCROLL ENGINE ---
 let scrollVelocity = 0; let scrollFrame = null;
@@ -518,7 +572,7 @@ function showToast(message, onUndo) {
     setTimeout(() => { if (toast.parentElement) toast.remove(); }, 5000);
 }
 
-// --- REMINDER LOGIC (Google Calendar Style) ---
+// --- REMINDER LOGIC ---
 function addReminderRow(val = 10, unit = 'minutes') {
     const list = document.getElementById('reminderList');
     const div = document.createElement('div');
@@ -544,7 +598,6 @@ function getRemindersFromDOM() {
     }));
 }
 
-// --- BROWSER NOTIFICATION POLLING ---
 function requestNotificationPermission() {
     if (!("Notification" in window)) {
         alert("This browser does not support desktop notification");
@@ -557,31 +610,23 @@ function requestNotificationPermission() {
     }
 }
 
-// Check for reminders every 30 seconds
 setInterval(checkReminders, 30000);
 
 function checkReminders() {
     if (Notification.permission !== "granted") return;
-
     const now = new Date();
-    const currentMinuteTs = Math.floor(now.getTime() / 60000) * 60000;
-
     items.forEach(item => {
         if (item.completed || !item.dueDate || !item.dueTime) return;
         if (!item.reminders || item.reminders.length === 0) return;
-
         const dueTime = new Date(`${item.dueDate}T${item.dueTime}`).getTime();
-
         item.reminders.forEach((rem, idx) => {
             let offsetMs = 0;
             if (rem.unit === 'minutes') offsetMs = rem.val * 60 * 1000;
             if (rem.unit === 'hours') offsetMs = rem.val * 60 * 60 * 1000;
             if (rem.unit === 'days') offsetMs = rem.val * 24 * 60 * 60 * 1000;
             if (rem.unit === 'weeks') offsetMs = rem.val * 7 * 24 * 60 * 60 * 1000;
-
             const notifyTime = dueTime - offsetMs;
             const uniqueNotifId = `${item.id}_${idx}`;
-
             if (notifyTime <= now.getTime() && notifyTime > (now.getTime() - 60000)) {
                 if (!firedNotifications.has(uniqueNotifId)) {
                     new Notification(item.title, {
@@ -595,7 +640,6 @@ function checkReminders() {
     });
 }
 
-
 // --- CRUD & LOGIC ---
 function openNewItem(preselectedType) {
     editingId = null; tempSubtasks = [];
@@ -604,11 +648,8 @@ function openNewItem(preselectedType) {
     if (preselectedType) document.getElementById('itemType').value = preselectedType;
     document.getElementById('modalTitle').textContent = 'New Item';
     renderTempSubtasks();
-    
-    // Default Reminders: Start with one (30 min)
     document.getElementById('reminderList').innerHTML = '';
     addReminderRow(30, 'minutes');
-
     document.getElementById('itemModal').classList.add('active');
     setTimeout(() => document.getElementById('itemTitle').focus(), 100);
 }
@@ -623,14 +664,11 @@ function editItem(id) {
         document.getElementById('itemTime').value = item.dueTime || '';
         document.getElementById('itemDescription').value = item.description;
         tempSubtasks = [...item.subtasks];
-        
-        // Load Reminders
         const list = document.getElementById('reminderList');
         list.innerHTML = '';
         if(item.reminders && item.reminders.length > 0) {
             item.reminders.forEach(r => addReminderRow(r.val, r.unit));
         }
-
         document.getElementById('modalTitle').textContent = 'Edit Item';
         renderTempSubtasks();
         document.getElementById('itemModal').classList.add('active');
@@ -651,12 +689,7 @@ function deleteItem(id) {
 function clearDateTime() {
     const dateInput = document.getElementById('itemDate');
     const timeInput = document.getElementById('itemTime');
-    dateInput.value = '';
-    timeInput.value = '';
-    dateInput.setCustomValidity('');
-    timeInput.setCustomValidity('');
-    dateInput.removeAttribute('required');
-    timeInput.removeAttribute('required');
+    dateInput.value = ''; timeInput.value = '';
 }
 
 function closeModal() { document.getElementById('itemModal').classList.remove('active'); setTimeout(() => { document.getElementById('itemForm').reset(); editingId = null; tempSubtasks = []; }, 200); }
@@ -664,7 +697,6 @@ function closeModal() { document.getElementById('itemModal').classList.remove('a
 document.getElementById('itemForm').onsubmit = (e) => {
     e.preventDefault();
     const reminders = getRemindersFromDOM();
-    
     const item = {
         id: editingId || Date.now(),
         title: document.getElementById('itemTitle').value,
@@ -680,50 +712,30 @@ document.getElementById('itemForm').onsubmit = (e) => {
         createdAt: Date.now()
     };
     
-    // Save to Array with Pinning Logic Priority
     if (editingId) {
         items[items.findIndex(i => i.id === editingId)] = item;
     } else {
-        // Find the index right after the last pinned item
         let insertIndex = 0;
-        while (insertIndex < items.length && items[insertIndex].pinned) {
-            insertIndex++;
-        }
-        // Insert the new item at the top of the "unpinned" section
+        while (insertIndex < items.length && items[insertIndex].pinned) { insertIndex++; }
         items.splice(insertIndex, 0, item);
     }
     
-    saveData(); 
-    closeModal(); 
-    renderItems(); 
-    renderSidebar(); 
+    saveData(); closeModal(); renderItems(); renderSidebar(); 
 };
 
-// PINNING LOGIC
 function togglePin(id) {
     const index = items.findIndex(i => i.id === id);
     if (index === -1) return;
-    
     const item = items[index];
     item.pinned = !item.pinned;
-    
-    // Remove it from its current spot
     items.splice(index, 1);
-    
-    if (item.pinned) {
-        // Move all the way to the very top
-        items.unshift(item);
-    } else {
-        // Move it back down to the top of the "unpinned" pile
+    if (item.pinned) { items.unshift(item); } 
+    else {
         let insertIndex = 0;
-        while (insertIndex < items.length && items[insertIndex].pinned) {
-            insertIndex++;
-        }
+        while (insertIndex < items.length && items[insertIndex].pinned) { insertIndex++; }
         items.splice(insertIndex, 0, item);
     }
-    
-    saveData();
-    renderItems();
+    saveData(); renderItems();
 }
 
 function addSubtask() { const val = document.getElementById('subtaskInput').value.trim(); if(val) { tempSubtasks.push({ text: val, completed: false, id: Date.now() }); document.getElementById('subtaskInput').value=''; renderTempSubtasks(); } }
@@ -777,7 +789,7 @@ function getCategoryName(id) { const cat = categories.find(c => c.id === id); re
 // --- SETTINGS & THEMES ---
 function openSettings() { 
     document.getElementById('settingsModal').classList.add('active'); 
-    initSettingsInputs(); // Make sure inputs reflect current state
+    initSettingsInputs(); 
 }
 function closeSettings() { document.getElementById('settingsModal').classList.remove('active'); }
 function switchSettingsTab(tabId) {
@@ -790,26 +802,11 @@ function setTheme(theme) {
     document.body.setAttribute('data-theme', theme);
     localStorage.setItem('theme', theme);
     const icon = document.getElementById('themeBtn').querySelector('i');
-
-    // 1. Clean slate: Remove all possible icon classes to avoid conflicts
     icon.classList.remove('fa-moon', 'fa-sun', 'fa-repeat');
-
-    // 2. Check if it is ANY Ranny variant
-    if (theme.startsWith('ranny')) {
-        // Show the "Cycle/Switch" icon
-        icon.classList.add('fa-repeat'); 
-    } 
-    // 3. Otherwise, check standard Dark themes
+    if (theme.startsWith('ranny')) { icon.classList.add('fa-repeat'); } 
     else {
-        const darkThemes = [
-            'dark', 'dark-green', 'dark-purple', 'dark-blue', 'dark-red', 'dark-cafe'
-        ];
-
-        if (darkThemes.includes(theme)) {
-            icon.classList.add('fa-moon');
-        } else {
-            icon.classList.add('fa-sun');
-        }
+        const darkThemes = ['dark', 'dark-green', 'dark-purple', 'dark-blue', 'dark-red', 'dark-cafe'];
+        if (darkThemes.includes(theme)) { icon.classList.add('fa-moon'); } else { icon.classList.add('fa-sun'); }
     }
 }
 
